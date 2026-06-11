@@ -41,13 +41,59 @@ export async function requestNotificationPermission(): Promise<boolean> {
 /**
  * Hook that checks incomplete tasks with due dates every 30 seconds.
  * Fires notifications at 24h and 3h before the deadline.
+ *
+ * 当通知首次开启（或页面刚加载）时，对已经过了提醒节点的任务
+ * 静默补标记，不补发通知，避免骚扰用户。
  */
 export function useNotification(tasks: Task[]) {
   const notifiedRef = useRef(getNotifiedSet());
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    if (!getNotifyEnabled()) return;
+    if (!getNotifyEnabled()) {
+      initializedRef.current = false;
+      return;
+    }
+
+    // 首次启动时，静默补标记已过期的节点，不发通知
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      const now = Date.now();
+      const hours24 = 24 * 60 * 60 * 1000;
+      const hours3 = 3 * 60 * 60 * 1000;
+      let changed = false;
+
+      tasks.forEach(task => {
+        if (task.completed || !task.dueDate) return;
+        const remaining = new Date(task.dueDate).getTime() - now;
+        if (remaining <= 0) return;
+
+        // 已进入3h窗口 → 补标记3h（不发通知）
+        if (remaining <= hours3) {
+          const key3 = milestoneKey(task.id, '3h');
+          if (!notifiedRef.current.has(key3)) {
+            notifiedRef.current.add(key3);
+            changed = true;
+          }
+          const key24 = milestoneKey(task.id, '24h');
+          if (!notifiedRef.current.has(key24)) {
+            notifiedRef.current.add(key24);
+            changed = true;
+          }
+        }
+        // 已进入24h窗口 → 补标记24h（不发通知）
+        else if (remaining <= hours24) {
+          const key24 = milestoneKey(task.id, '24h');
+          if (!notifiedRef.current.has(key24)) {
+            notifiedRef.current.add(key24);
+            changed = true;
+          }
+        }
+      });
+
+      if (changed) saveNotifiedSet(notifiedRef.current);
+    }
 
     const interval = setInterval(() => {
       const now = Date.now();
