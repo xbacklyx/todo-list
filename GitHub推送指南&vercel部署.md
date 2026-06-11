@@ -120,3 +120,10 @@ git branch
 | `git status` | 查看当前状态 |
 | `git log --oneline` | 查看提交记录 |
 | `git branch` | 查看当前分支 |
+
+# vercel部署
+##用Github登录，注意用谷歌网站，我用联想浏览器一直让我输入手机号。登录后正常走就行。 
+  1. 在 Vercel 首页点 New Project
+  2. 授权 GitHub → 搜索找到 xbacklyx/todo-list → 点 Import
+  3. 什么都不用改，直接点 Deploy
+  4. 等 30 秒，得到一个 xxx.vercel.app 网址，网站可以收藏，方便下次寻找
